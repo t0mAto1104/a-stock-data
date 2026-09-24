@@ -1293,7 +1293,7 @@ class FuturesCompletenessTests(unittest.TestCase):
         with patch.dict(self.ns, {"_shfe_json": shfe_json}):
             for path, ok_day, bad_day in (("future/dailydata/kx", "20180323", "20180326"),
                                           ("future/dailydata/pm", "20200702", "20200703"),
-                                          ("option/dailydata/kx", "20210611", "20210615")):
+                                          ("option/dailydata/kx", "20210618", "20210621")):
                 with self.subTest(path=path):
                     self.assertEqual(self.ns["_shfe_ine_ids"](path, ok_day, "k", "f"), set())
                     with self.assertRaises(RuntimeError):

@@ -3,7 +3,7 @@
 <h1 align="center">a-stock-data</h1>
 
 <p align="center">
-  <b>Full-stack data toolkit for China A-shares — 15 layers · 85 endpoints · 34 sources · zero-auth (except iwencai)</b>
+  <b>Full-stack data toolkit for China A-shares — 15 layers · 87 endpoints · 34 sources · zero-auth (except iwencai)</b>
 </p>
 
 <p align="center">
@@ -17,7 +17,7 @@
   <a href="https://github.com/simonlin1212/a-stock-data/stargazers"><img src="https://img.shields.io/github/stars/simonlin1212/a-stock-data?style=social" alt="Stars"></a>
   <br>
   <img src="https://img.shields.io/badge/layers-15-2ea44f.svg" alt="Layers">
-  <img src="https://img.shields.io/badge/endpoints-85-2ea44f.svg" alt="Endpoints">
+  <img src="https://img.shields.io/badge/endpoints-87-2ea44f.svg" alt="Endpoints">
   <img src="https://img.shields.io/badge/sources-34-2ea44f.svg" alt="Sources">
   <img src="https://img.shields.io/badge/auth-zero-success.svg" alt="Zero Auth">
 </p>
@@ -26,11 +26,11 @@
   <a href="#data-coverage-15-categories">Coverage</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="#quick-start">Quick Start</a> ·
-  <a href="#85-endpoints">Endpoints</a> ·
+  <a href="#87-endpoints">Endpoints</a> ·
   <a href="./CHANGELOG.md">Changelog</a>
 </p>
 
-Full-stack data toolkit for China A-Share market — 15-layer architecture · 85 capability endpoints (80 primary + 5 backups) · 34 data sources · direct HTTP calls except two TCP client libraries (mootdx / baostock)
+Full-stack data toolkit for China A-Share market — 15-layer architecture · 87 capability endpoints (82 primary + 5 backups) · 34 data sources · direct HTTP calls except two TCP client libraries (mootdx / baostock)
 
 A self-contained Skill file that consolidates raw A-share and related market data from 34 sources into a ready-to-use toolkit for AI coding assistants. No need to memorize Tencent K-line paging parameters, the binary layout of TDX end-of-day packages, Eastmoney PDF Referer headers, or iwencai X-Claw authentication — it's all handled. And when a primary source bans you, there's a backup-source quick reference to fall back on.
 
@@ -38,6 +38,8 @@ A self-contained Skill file that consolidates raw A-share and related market dat
 >
 > The Skill file is structured Markdown + embedded Python. Any AI coding assistant with context injection can use it.
 
+> **V3.10.0 (2026-09-22):** after the TDX public servers stopped serving K-lines, order books and ticks (#52), the quote layer now lists the working sources first (Tencent → Tencent K-lines → TDX end-of-day package → Tencent ticks) and moves mootdx to the end as an archive. New: §1.4 `tencent_ticks()` — Tencent intraday tick-by-tick trades for the latest trading day (replaces mootdx ticks) — and §13.7 `futures_kline()` — Sina futures daily K-lines, continuous or single contract, **now covering DCE**. Layer 1 is renumbered; the old→new mapping is in the CHANGELOG.
+>
 > **V3.9.0 (2026-09-20):** three new layers — futures & commodities, event-driven, convertible bonds — plus Tencent K-lines, the TDX official end-of-day package, Sina research reports, ETF shares, yield curves and more in the existing layers: 25 new entries in total. The broken TDX public-server K-line commands (#52) are now routed over HTTP. See the [CHANGELOG](./CHANGELOG.md) (Chinese).
 
 ---
@@ -69,12 +71,13 @@ Plus 5 backups: official dragon-tiger, Sina fund flow, filings, official SSE/SZS
 ## Architecture
 
 ```
-China A-Share Full-Stack Data · 15-Layer Architecture · V3.9.0
+China A-Share Full-Stack Data · 15-Layer Architecture · V3.10.0
 │  (Priority: Tencent / exchanges and official bodies first — no IP bans; mootdx quote commands return empty since 2026-09,
 │   so it is only used for financials and F10; Eastmoney only for exclusive data, with built-in throttling)
 ├── Market Data    Tencent + TDX site + Baidu + Sina   Live price / PE / PB / market cap + Index/ETF + K-lines (w/ MA5/10/20)
 │                                                     + adjust factors qfq/hfq  ★V3.7
 │                                                     + adjusted daily/weekly/monthly & 1–60-min K-lines + full-market daily bars  ★V3.9
+│                                                     + intraday tick-by-tick trades (SSE/SZSE stocks + ETFs)  ★V3.10
 ├── Research       Eastmoney + THS + iwencai + Sina   Stock reports / Industry reports / PDF / Consensus EPS / NL search
 │                                                     + Sina report list (second source)  ★V3.9
 ├── Signals        THS + Eastmoney                    Hot stocks + Sector attribution + Northbound flow
@@ -95,6 +98,7 @@ China A-Share Full-Stack Data · 15-Layer Architecture · V3.9.0
 ├── Index/Calendar CSI + CNI + SZSE               Constituents / weights / PE & dividend yields / official trading calendar
 ├── Futures        SHFE + INE + CZCE + CFFEX + GFEX + Sina + SGE
 │                                                     Futures daily / commodity & index options / position rank / real-time / A50 / SGE gold  ★V3.9
+│                                                     + futures daily K-lines (continuous + contracts, incl. DCE)  ★V3.10
 ├── Event-Driven   Eastmoney datacenter               Earnings previews / surveys / holder trades / buybacks / pledges / IPO calendar  ★V3.9
 └── Convertibles   Eastmoney datacenter               Terms / conversion value / premium / listing status  ★V3.9
 ```
@@ -125,22 +129,23 @@ Launch Claude Code and say "Check the valuation of 688017" — the skill activat
 
 ---
 
-## 85 Endpoints
+## 87 Endpoints
 
-There are 80 primary entries and 5 backups. Counts refer to capability entries: CSI/CNI or SSE/SZSE routes within one function count once; helpers and research candidates are excluded.
+There are 82 primary entries and 5 backups. Counts refer to capability entries: CSI/CNI or SSE/SZSE routes within one function count once; helpers and research candidates are excluded.
 
-> **Counting convention:** the tables below have 86 rows but count as 85 capability endpoints — "Eastmoney Industry Reports" shares **the same endpoint** as "Eastmoney reportapi" (only the `qType` parameter differs) and "THS Northbound (historical)" is a local self-built cache (not a separate endpoint), so neither is counted; the single "EM Intraday Anomaly Pool" row covers **two** endpoints (`list` / `count`), adding one back. 86 − 1 − 1 + 1 = 85. The ticker helper `to_joinquant()` is not counted.
+> **Counting convention:** the tables below have 88 rows but count as 87 capability endpoints — "Eastmoney Industry Reports" shares **the same endpoint** as "Eastmoney reportapi" (only the `qType` parameter differs) and "THS Northbound (historical)" is a local self-built cache (not a separate endpoint), so neither is counted; the single "EM Intraday Anomaly Pool" row covers **two** endpoints (`list` / `count`), adding one back. 88 − 1 − 1 + 1 = 87. The ticker helper `to_joinquant()` is not counted.
 
 ### Market Data (real-time, no IP ban)
 
 | Endpoint | Data |
 |----------|------|
-| mootdx Market Data | Candlesticks (multi-period) + Level-2 order book + tick-by-tick + 46-field quote (⚠️ TDX public servers return empty since 2026-09, see FAQ #52) |
 | Tencent Finance | PE(TTM) / PB / Market Cap / Float Cap / Turnover / Price Limits / Index / ETF |
-| **Baidu K-line** | Daily K-line + MA5/MA10/MA20 moving averages included (V3.0 new) |
-| **Sina Adjust Factors** | qfq / hfq factor series + applying them to unadjusted candles (V3.7 new) |
 | **Tencent K-lines** | SSE/SZSE daily/weekly/monthly forward- and back-adjusted + 1/5/15/30/60-minute bars, rotating across three Tencent hosts; no BSE (V3.9 new) |
 | **TDX End-of-Day Package** | Every SSE/SZSE/BSE security's daily bar for one trading day, incl. turnover value; one 2–3 MB zip; 2022-01-04 and 2023-01-03 tested available, 2021-01-04 gone, not every day verified; packages before 2022-05-06 have no BSE files (V3.9 new) |
+| **Tencent Ticks** | Every trade of the latest trading day (~3-second snapshots): time / price / volume / value / buy-sell side, SSE/SZSE stocks + ETFs, no BSE; after the close the total is checked against the day's turnover (V3.10 new, replaces mootdx ticks) |
+| **Baidu K-line** | Daily K-line + MA5/MA10/MA20 moving averages included (V3.0 new) |
+| **Sina Adjust Factors** | qfq / hfq factor series + applying them to unadjusted candles (V3.7 new) |
+| mootdx Market Data (archive) | Candlesticks (multi-period) + order book + tick-by-tick + 46-field quote (⚠️ TDX public servers return empty since 2026-09, see FAQ #52; use Tencent K-lines / the end-of-day package for bars and Tencent Ticks for trades) |
 
 ### Research Reports
 
@@ -262,10 +267,11 @@ There are 80 primary entries and 5 backups. Counts refer to capability entries: 
 | **Options Daily** | Commodity and index options: strike, settlement, volume and open interest, Delta, implied volatility (per series on SHFE / INE, per contract on CZCE / GFEX; CFFEX publishes neither Delta nor IV) |
 | **Member Position Rank** | Top 20 members by volume / long / short positions and their changes (SHFE, INE, CZCE, CFFEX) |
 | **Real-Time Futures** | Sina real-time price and best bid/ask across all six futures exchanges (use this for DCE contracts); price limits for CFFEX contracts only |
+| **Futures Daily K-lines** | Sina daily bars for a continuous series (`RB0` / `M0`, back to 2005) or a single contract (those expiring from about 2022), all six exchanges incl. DCE; prices match the official daily data, settlement prices are incomplete (V3.10 new) |
 | **FTSE China A50** | FTSE China A50 continuous futures quote |
 | **SGE Spot** | Shanghai Gold Exchange Au99.99 / Au(T+D) / Ag(T+D) / Pt99.95 and more, daily bars |
 
-> DCE's website uses a JavaScript challenge (plain HTTP gets 412), so its daily quotes are not integrated; use Real-Time Futures for DCE contracts.
+> DCE's website uses a JavaScript challenge (plain HTTP gets 412), so its official daily quotes are not integrated; use Futures Daily K-lines for DCE history and Real-Time Futures for live prices.
 
 ### Event-Driven (V3.9 new)
 
@@ -389,7 +395,7 @@ Just tell your AI assistant:
 | **1 (top)** | Tencent Finance | HTTP | **Never banned** (one K-line host rate-limits after ~600 calls; three hosts rotate) | Live price / PE / PB / market cap / turnover / price limits / index / ETF / daily-weekly-monthly and minute K-lines |
 | **2** | Exchanges / official bodies | HTTP | Very low (avoid bursts) | TDX package, SSE / SZSE / BSE, five futures exchanges, SGE, ChinaBond, China Money, CSI / CNI, PBoC, NBS |
 | **3** | Sina / cninfo / THS / Baidu / CLS / Wallstreetcn / CCTV / SW | HTTP | Low | Financial statements, adjust factors, report lists, real-time futures, filings, consensus EPS, hot stocks and northbound, K-lines with MAs, live news, evening news, industry history |
-| **4** | mootdx (TDX) | TCP 7709 | Never banned | Financial snapshots and F10 "latest notes" work; **K-lines / order book / ticks return empty since 2026-09 (#52)** |
+| **4** | mootdx (TDX) | TCP 7709 | Never banned | Financial snapshots and F10 "latest notes" work; **K-lines / order book / ticks return empty since 2026-09 (#52)**; ticks now come from Tencent §1.4 |
 | **4** | baostock | TCP | Low (no registration) | Valuation history PE/PB/PS/PCF + turnover + suspension + ST + listing/delisting dates (**no Beijing Exchange**) |
 | Key required | iwencai | OpenAPI | Low | NL semantic report search (the only source that needs a key) |
 | **last (exclusive only)** | **Eastmoney** datacenter / push2 / reportapi / search / np-weblist | HTTP | **Medium — has rate-limit risk** | Dragon-tiger / lockup / margin / block trades / shareholders / dividends / fund flow / report PDFs / news / ST list / LPR / event-driven / convertibles (all via `em_get()`) |
@@ -452,9 +458,10 @@ Execute the full Layer 12 code block in SKILL.md, then the official margin/BSE b
 
 **mootdx returns no K-lines / `tdx_client()` says no server can return data (#52)**
 Tested on 2026-09-20 on each of the 10 built-in servers: all accept TCP connections and return financials and ex-rights data, F10 only returns the "latest notes" category, and K-lines, order books and ticks come back with 0 rows. This is a server-side change; switching mootdx versions does not help. Alternatives:
-> - SSE/SZSE daily / weekly / monthly K-lines (adjusted) and 1–60-minute bars → §1.5 `tencent_kline()`
-> - Full-market SSE/SZSE/BSE daily bars for one trading day (with turnover value; the only daily-bar route for BSE) → §1.6 `tdx_daily_package()`
-> - Live price and order book → §1.2 Tencent, or the official exchange books in the backup table
+> - SSE/SZSE daily / weekly / monthly K-lines (adjusted) and 1–60-minute bars → §1.2 `tencent_kline()`
+> - Full-market SSE/SZSE/BSE daily bars for one trading day (with turnover value; the only daily-bar route for BSE) → §1.3 `tdx_daily_package()`
+> - Live price and order book → §1.1 Tencent, or the official exchange books in the backup table
+> - Intraday tick-by-tick trades → §1.4 `tencent_ticks()` (latest trading day only, no BSE)
 > - Financial snapshots / F10 "latest notes" → `tdx_client(check='finance')`, which still works; the other 8 F10 categories (company profile, shareholders, etc.) are no longer returned — see SKILL.md §6.2 for replacements
 >
 > In K-line mode `tdx_client()` probes servers first, so a full failure takes about a minute to raise.
@@ -465,25 +472,27 @@ No. easy_tdx is another client for the same TDX protocol, not a new data source,
 **Can I backtest with it? Does it work with JoinQuant? (#55)**
 This skill fetches data; it **has no backtesting engine**. Feed the data into your own framework or JoinQuant.
 > - Tickers: `norm_ticker()` / `get_prefix()` accept JoinQuant codes `600519.XSHG` / `000001.XSHE`; `to_joinquant()` converts any supported form to JoinQuant codes. JoinQuant's public docs list no BSE suffix, so BSE codes raise an error instead of being guessed.
-> - Adjustment: JoinQuant `get_price` defaults to forward adjustment (`fq='pre'`). Compare against §1.5 `tencent_kline(adjust='qfq')`, or apply the §1.4 adjust factors yourself.
+> - Adjustment: JoinQuant `get_price` defaults to forward adjustment (`fq='pre'`). Compare against §1.2 `tencent_kline(adjust='qfq')`, or apply the §1.6 adjust factors yourself.
 > - Look-ahead bias: use §6.5 for historical valuation and §6.7 for historical industry membership; §12 index constituents are current snapshots only.
 
 **Is Eastmoney the only research-report source? (#53)**
 No. §2.4 `sina_research_reports()` is a second source that pages by stock or across the market and keeps working when Eastmoney blocks you. It has title, type, broker, analysts and date but no ratings or price targets; use Eastmoney reports or THS consensus for those.
 
 **Are commodity futures and options covered? What about DCE? (#49)**
-Yes, see Futures & Commodities. Official futures and options daily data come from SHFE, INE, CZCE, CFFEX and GFEX; member position rankings cover the first four (not GFEX). Sina real-time futures, FTSE China A50 and SGE spot are included too. **DCE's website blocks scripted access, so its daily quotes are not integrated**; use Sina real-time futures for DCE contracts such as soybean meal and iron ore.
+Yes, see Futures & Commodities. Official futures and options daily data come from SHFE, INE, CZCE, CFFEX and GFEX; member position rankings cover the first four (not GFEX). Sina real-time futures, FTSE China A50 and SGE spot are included too. **DCE's website blocks scripted access, so its official daily quotes are not integrated**; for DCE contracts such as soybean meal and iron ore use V3.10's `futures_kline('M0')` (Sina, continuous or single contract) for history and Sina real-time futures for live prices.
 
 **Why are cninfo IRM answers empty for Shanghai-listed companies?**
 cninfo IRM only covers Shenzhen-listed companies; Shanghai tickers return 0 rows. Use §10.3 `sse_e_interaction()` (SSE e-Interaction) for Shanghai. Some companies genuinely have no replies in the last month, so an empty table can be correct.
 
 ## Verification
 
-`python3 -m unittest discover -s tests -v` extracts the shipped code directly from SKILL.md and checks dates, fields, symbol routing, units, pagination and error propagation without network access (140 offline tests as of V3.9).
+`python3 -m unittest discover -s tests -v` extracts the shipped code directly from SKILL.md and checks dates, fields, symbol routing, units, pagination and error propagation without network access (165 offline tests as of V3.10).
 
 Live tests are opt-in; the date must be a trading day the sources have already published:
 
 ```bash
+# the tick and futures K-line entries added in V3.10
+ASTOCK_LIVE_V310=1 python3 -m unittest tests.test_v310_sources -v
 # the 25 entries added in V3.9 (31 live calls)
 ASTOCK_LIVE_V39=2026-09-18 python3 -m unittest tests.test_v39_sources -v
 # the V3.8 official margin and BSE backups
